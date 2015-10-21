@@ -136,7 +136,7 @@ void parse(char *buffer, char** response_buffer)
     int word_start = 0, word_end = 0;
     char req_type[100];
     word_end = get_word(word_start, line, &req_type);
-    word_start = word_end;
+    word_start = word_end + 1;
     
     char file_name[100]; // has a slash as first char
     word_end = get_word(word_start, line, &file_name);
@@ -191,17 +191,14 @@ void parse(char *buffer, char** response_buffer)
     // ETag: "5519ee21-239c"
     // Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'
 
-    // int test = access(file_name, F_OK);
-    // printf("%d\n", test);
-
     // int j = 0;
     // while(j < sizeof(file_name)){
     //   printf("%c", file_name[j]);
     //   j = j + 1;
     // }
 
-    // issue right now: this is returning 0, not -1. I changed it to 0 for now but we need it to be -1 eventually.
-    if (access(file_name, F_OK) == 0)    //FILE DOESN'T EXIST
+    // OK, now we are correctly entering this when the file doesn't exist.
+    if (access(file_name, F_OK) == -1)    //FILE DOESN'T EXIST
     {
 
         strncpy(*response_buffer, "HTTP/1.1", 8);    
