@@ -96,7 +96,7 @@ int get_word(int offset, char* line, char* word)
 }
 
 // Returns filesize if valid, -1 if not valid
-char *parse(char *buffer, char** response_buffer, int *rb_len)
+void parse(char *buffer, char** response_buffer)
 {
 //     char *line;
 //     line = (char*) malloc(1000); 
@@ -239,26 +239,27 @@ char *parse(char *buffer, char** response_buffer, int *rb_len)
         strcat(*response_buffer, " GMT\r\n");
 
         // Content Type
-        int i;
-        for (i=0; i < sizeof(file_name); i++) {
-            if (file_name[i] == '.') {
-                switch (file_name[i+1]) {
-                case 'j':
-                    strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
-                    break;
-                case 'g':
-                    strcat(*response_buffer, "Content-Type: image/gif\r\n");
-                    break;
-                default:
-                    strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
-                    break;
-                }
-                break;
-            }
-        }
-        if (i == sizeof(file_name)) {    // No extension
-            strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
-        }
+//         int i;
+//         for (i=0; i < sizeof(file_name); i++) {
+//             if (file_name[i] == '.') {
+//                 switch (file_name[i+1]) {
+//                 case 'j':
+//                     strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
+//                     break;
+//                 case 'g':
+//                     strcat(*response_buffer, "Content-Type: image/gif\r\n");
+//                     break;
+//                 default:
+//                     strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
+//                     break;
+//                 }
+//                 break;
+//             }
+//         }
+//         if (i == sizeof(file_name)) {    // No extension
+//             strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
+//         }
+        strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");    // content-type of error page is html
         
         // Content-Length
         strcat(*response_buffer, "Content-Length: 89\r\n");
@@ -268,7 +269,6 @@ char *parse(char *buffer, char** response_buffer, int *rb_len)
         
         // 404 Error Message
         strcat(*response_buffer, "\r\n<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>404 Not Found</H1></BODY></HTML>");
-        return NULL;
     }
     
     else  // Valid filename
@@ -385,37 +385,39 @@ char *parse(char *buffer, char** response_buffer, int *rb_len)
         n = sprintf(int_string, "%d", date_and_time->tm_sec);
         strcat(*response_buffer, int_string);
         strcat(*response_buffer, " GMT\r\n");
-
-        // Content Type
-        int i;
-        for (i=0; i < sizeof(file_name); i++) {
-            if (file_name[i] == '.') {
-                switch (file_name[i+1]) {
-                case 'j':
-                    strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
-                    break;
-                case 'g':
-                    strcat(*response_buffer, "Content-Type: image/gif\r\n");
-                    break;
-                default:
-                    strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
-                    break;
-                }
-                break;
-            }
-        }
-        if (i == sizeof(file_name)) {    // No extension
-            strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
-        }
         
         if (access(file_name, R_OK) == -1) {        // Permission Error
+            // Content Type
+            strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
             // Content-Length
             strcat(*response_buffer, "Content-Length: 89\r\n");
             // Data
             strcat(*response_buffer, "\r\n<HTML><HEAD><TITLE>403 Forbidden</TITLE></HEAD><BODY><H1>403 Forbidden</H1></BODY></HTML>");
-            return NULL;
         }
         else {
+            // Content Type
+            int i;
+            for (i=0; i < sizeof(file_name); i++) {
+                if (file_name[i] == '.') {
+                    strcat(*response_buffer, file_name[i+1]);
+                    switch (file_name[i+1]) {
+                    case 'j':
+                        strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
+                        break;
+                    case 'g':
+                        strcat(*response_buffer, "Content-Type: image/gif\r\n");
+                        break;
+                    default:
+                        strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
+                        break;
+                    }
+                    break;
+                }
+            }
+            if (i == sizeof(file_name)) {    // No extension
+                strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
+            }
+
             // Get File Info
             struct stat attrib;
             int ret_val;
@@ -527,13 +529,20 @@ char *parse(char *buffer, char** response_buffer, int *rb_len)
             strcat(*response_buffer, " GMT\r\n");
 
             // Data
-//             FILE *fp;
-//             fp = fopen(file_name, 'r');
-//             strcat(*response_buffer, "\r\n<HTML><HEAD><TITLE>WORKS</TITLE></HEAD><BODY><H1>WORKS</H1></BODY></HTML>");
-            *rb_len = attrib.st_size;
-            return file_name;
+            FILE *fp;
+            fp = fopen(file_name, "r");
+
+            char *line = NULL;
+            size_t len = 0;
+            ssize_t read = 0;
+            while ( (read = getline(&line, &len, fp)) != -1) {
+                strcat(*response_buffer, "\r\n");
+                strcat(*response_buffer, line);
+            }
+            fclose(fp);
         }
     }
+    printf("%s", *response_buffer);
 }
 
 void error(char *msg)
@@ -578,8 +587,8 @@ int main(int argc, char *argv[])
     int n;
     char buffer[256];
     char *response_buffer, *file_name;
-    response_buffer = (char*) malloc(1000);
-    int rb_len = 0, data_len = 0;
+    response_buffer = (char*) malloc(10000);
+    int rb_len = 0;
     
     memset(buffer, 0, 256);  //reset memory
     
@@ -589,7 +598,7 @@ int main(int argc, char *argv[])
     printf("Here is the message:\n%s\n",buffer);
 
     //reply to client
-    file_name = parse(buffer, &response_buffer, &rb_len);    // need & anywhere?
+    parse(buffer, &response_buffer);    // need & anywhere?
 //     char c = response_buffer[rb_len];
 //     while (c != NULL)
 //     {
@@ -597,16 +606,25 @@ int main(int argc, char *argv[])
 //         c = response_buffer[rb_len];
 //     }
 //     n = write(newsockfd, response_buffer, rb_len);
-    n = write(newsockfd, response_buffer, 1000);
+    n = write(newsockfd, response_buffer, 10000);
     if (n < 0) error("ERROR writing to socket");
-    printf("\n\n%d %s\n\n", rb_len, file_name);
+//     printf("\n\n%d %s\n\n", rb_len, file_name);
     
-    if (file_name != NULL) {
-        FILE *fp;
-        fp = fopen(file_name, 'r');
-        n = write(newsockfd, fp, rb_len);
-        if (n < 0) error("ERROR writing to socket");
-    }
+//     if (file_name != NULL) {
+//         FILE *fp;
+//         fp = fopen(file_name, "r");
+        
+//         char *line = NULL;
+//         size_t len = 0;
+//         ssize_t read = 0;
+//         while ( (read = getline(&line, &len, fp)) != -1) {
+// //             printf("%d %s\n", read, line);
+//             n = write(newsockfd, line, read);
+//             printf("%d\n",n);
+//             if (n < 0) error("ERROR writing to socket");
+//         }
+//         fclose(fp);
+//     }
     
     
     close(newsockfd);//close connection 
