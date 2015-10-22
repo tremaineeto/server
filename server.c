@@ -1,4 +1,5 @@
-/* A simple server in the internet domain using TCP
+/*
+ A simple server in the internet domain using TCP
  The port number is passed as an argument
  This version runs forever, forking off a separate
  process for each connection
@@ -75,11 +76,12 @@
  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'
  */
 
-// http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
 //http://stackoverflow.com/questions/9828752/read-line-by-line-from-a-socket-buffer
+
+// http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
 // CTRL+F to "Enhancements to the server code" to see the dostuff() function to let the connection actually run forever
 
-int printSomething(){
+void printSomething(){
   printf("hello");
 }
 
@@ -146,30 +148,6 @@ void parse(char *buffer, char** response_buffer)
     char html_version[100];
     word_end = get_word(word_start, line, &html_version);
 
-    //word_start = word_end;
-
-    // int i = 0;
-    // for (i; i < sizeof(req_type); i++) {
-    //     printf("%c", req_type[i]);
-    // }
-
-    // int j = 1;    // get rid of / temporarily, but have to deal with it
-    // for (j; j < sizeof(file_name); j++) {
-    //     printf("%c", file_name[j]);
-    // }
-
-    // printf("%c", html_version[0]);
-    // printf("%c", html_version[1]);
-    // printf("%c", html_version[2]);
-    // printf("%c", html_version[3]);
-    // printf("%c", html_version[4]);
-    // printf("%c", html_version[5]);
-
-    // int k = 0;
-    // for (k; k < sizeof(html_version); k++) {
-    //     printf("%c", html_version[k]);
-    // }
-
     //printf("request: %s, file: %s, html version: %s", req_type, file_name, html_version);
     
     
@@ -208,74 +186,154 @@ void parse(char *buffer, char** response_buffer)
         // Date and Time
         time_t t = time(NULL);
         struct tm * date_and_time;
-        date_and_time = localtime(&t);
+        // date_and_time = localtime(&t);
+        date_and_time = gmtime(&t);
 
         strcat(*response_buffer, "Date: ");
 
-        printf("\n WEEKDAY INT: %d\n", date_and_time->tm_wday);
+        //printf("\n WEEKDAY INT: %d\n", date_and_time->tm_wday);
+
+        // Day of the week
+        switch (date_and_time->tm_wday) {
+        case 0:
+            strcat(*response_buffer, "Sun, ");
+            break;
+        case 1:
+            strcat(*response_buffer, "Mon, ");
+            break;
+        case 2:
+            strcat(*response_buffer, "Tue, ");
+            break;
+        case 3:
+            strcat(*response_buffer, "Wed, ");
+            break;
+        case 4:
+            strcat(*response_buffer, "Thu, ");
+            break;
+        case 5:
+            strcat(*response_buffer, "Fri, ");
+            break;
+        case 6:
+            strcat(*response_buffer, "Sat, ");
+            break;
+        }
         
-        //strcat(response_buffer, date_and_time->tm_wday);        // causes segfault because date_and_time->tm_wday is an int
+        // Date of the month
+        if (date_and_time->tm_mday < 10) {
+            strcat(*response_buffer, "0");
+        }
+
+        char int_string[5];  // To convert integers to strings (year = need 5)
+        int n;
+        n = sprintf(int_string, "%d", date_and_time->tm_mday);
+        strcat(*response_buffer, int_string);  // change second argument to string
+
+      
+        // Month
+        switch (date_and_time->tm_mon) {
+        case 0:
+            strcat(*response_buffer, " Jan ");
+            break;
+        case 1:
+            strcat(*response_buffer, " Feb ");
+            break;
+        case 2:
+            strcat(*response_buffer, " Mar ");
+            break;
+        case 3:
+            strcat(*response_buffer, " Apr ");
+            break;
+        case 4:
+            strcat(*response_buffer, " May ");
+            break;
+        case 5:
+            strcat(*response_buffer, " Jun ");
+            break;
+        case 6:
+            strcat(*response_buffer, " Jul ");
+            break;
+        case 7:
+            strcat(*response_buffer, " Aug ");
+            break;
+        case 8:
+            strcat(*response_buffer, " Sep ");
+            break;
+        case 9:
+            strcat(*response_buffer, " Oct ");
+            break;
+        case 10:
+            strcat(*response_buffer, " Nov ");
+            break;
+        case 11:
+            strcat(*response_buffer, " Dec ");
+            break;
+        }
         
-        // strcat(*response_buffer, date_and_time->tm_mday);
+        // Year
+        n = sprintf(int_string, "%d", date_and_time->tm_year + 1900);  // Epoch time
+        strcat(*response_buffer, int_string);
         
-        // strcat(*response_buffer, date_and_time->tm_mon);
+        // Hour
+        strcat(*response_buffer, " ");
+        if (date_and_time->tm_hour < 10) {
+            strcat(*response_buffer, "0");
+        }
+        n = sprintf(int_string, "%d", date_and_time->tm_hour);
+        strcat(*response_buffer, int_string);
         
-        // strcat(*response_buffer, date_and_time->tm_year);
-               
-        // strcat(*response_buffer, date_and_time->tm_hour);
-               
-        // strcat(*response_buffer, date_and_time->tm_min);
+        // Minutes
+        strcat(*response_buffer, ":");
+        if (date_and_time->tm_min < 10) {
+            strcat(*response_buffer, "0");
+        }
+        n = sprintf(int_string, "%d", date_and_time->tm_min);
+        strcat(*response_buffer, int_string);
         
-        // strcat(*response_buffer, date_and_time->tm_sec);
+        // Seconds
+        strcat(*response_buffer, ":");
+        if (date_and_time->tm_sec < 10) {
+            strcat(*response_buffer, "0");
+        }
+        n = sprintf(int_string, "%d", date_and_time->tm_sec);
+        strcat(*response_buffer, int_string);
+        strcat(*response_buffer, " GMT\r\n");
+
+        // Content Type
+        int i;
+        for (i=0; i < sizeof(file_name); i+=sizeof(char*)) {
+            if (file_name[i] == '.') {
+                switch (file_name[i+sizeof(char*)]) {
+                case 'j':
+                    strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
+                    break;
+                case 'g':
+                    strcat(*response_buffer, "Content-Type: image/gif\r\n");
+                    break;
+                default:
+                    strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
+                    break;
+                }
+                break;
+            }
+        }
+
+        // Content-Length
+        strcat(*response_buffer, "Content-Length: 89\r\n");
         
-        // //GMT\r\n
+        // Connection
+        strcat(*response_buffer, "Connection: close\r\n");
         
-        // //Content-Type
-        // char *ext;      // changed this from ext[10];
-        // ext = strtok(file_name, ".");
-        // while (ext != NULL)
-        // {
-        //     ext = strtok(file_name, ".");
-        // }
-        // if (ext == "html")
-        // {
-        //     strcat(response_buffer, "Content-Type: text/html\r\n");
-        // }
-        // else if (ext == "jpeg")
-        // {
-        //     strcat(response_buffer, "Content-Type: image/jpeg\r\n");
-        // }
-        // else if (ext == "gif")
-        // {
-        //     strcat(response_buffer, "Content-Type: image/gif\r\n");
-        // }
-        // else
-        // {
-        //     strcat(response_buffer, "Content-Type: text/html\r\n");
-        // }
-        
-        // // Content-Length
-        // strcat(response_buffer, "Content-Length: 89\r\n");
-        
-        // // Connection
-        // strcat(response_buffer, "Connection: close\r\n");
-        
-        // // 404 Error Message
-        // char s[89] = "<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>404 Not Found</H1></BODY></HTML>";
-        // //s = "<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>404 Not Found</H1></BODY></HTML>"
-        // strcat(response_buffer, "\r\n<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>404 Not Found</H1></BODY></HTML>");
+        // 404 Error Message
+        strcat(*response_buffer, "\r\n<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>404 Not Found</H1></BODY></HTML>");
 
         // printf("test");
         printf("%s", *response_buffer);
-
     }
 
-
-
-    // else
-    // {
+    else  // Valid filename
+    {
         
-    // }
+    }
 }
 
 void error(char *msg)
