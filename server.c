@@ -81,41 +81,9 @@
 // http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
 // CTRL+F to "Enhancements to the server code" to see the dostuff() function to let the connection actually run forever
 
-int get_word(int offset, char* line, char* word)
-{
-    memset(word, 0, 100);
-    int position = 0;
-    char c = line[offset+position];
-    while (c != ' ' && c != '\r')  // the NULL is preventing this from being entered
-    {
-        c = line[offset+position];
-        word[position] = c;
-        position++;
-    }
-    return offset+position;
-}
 
-// Returns filesize if valid, -1 if not valid
 void parse(char *buffer, char** response_buffer)
 {
-//     char *line;
-//     line = (char*) malloc(1000); 
-
-//     line = strtok(buffer, "\n");
-    
-    // Request line
-//     int word_start = 0, word_end = 0;
-//     char req_type[100];
-//     word_end = get_word(word_start, line, &req_type);
-//     word_start = word_end + 1;
-    
-//     char file_name[100]; // has a slash as first char
-//     word_end = get_word(word_start, line, &file_name);
-//     word_start = word_end;
-
-//     char html_version[100];
-//     word_end = get_word(word_start, line, &html_version);
-    
     char *req_type, *file_name, *html_version;
     req_type = strtok(buffer, " ");
     file_name = strtok(NULL, " ");
@@ -131,10 +99,8 @@ void parse(char *buffer, char** response_buffer)
         // Date and Time
         time_t t = time(NULL);
         struct tm * date_and_time;
-        // date_and_time = localtime(&t);
         date_and_time = gmtime(&t);
         strcat(*response_buffer, "Date: ");
-
         // Day of the week
         switch (date_and_time->tm_wday) {
         case 0:
@@ -159,7 +125,6 @@ void parse(char *buffer, char** response_buffer)
             strcat(*response_buffer, "Sat, ");
             break;
         }
-        
         // Date of the month
         if (date_and_time->tm_mday < 10) {
             strcat(*response_buffer, "0");
@@ -168,7 +133,6 @@ void parse(char *buffer, char** response_buffer)
         int n;
         n = sprintf(int_string, "%d", date_and_time->tm_mday);
         strcat(*response_buffer, int_string);  // change second argument to string
-      
         // Month
         switch (date_and_time->tm_mon) {
         case 0:
@@ -208,11 +172,9 @@ void parse(char *buffer, char** response_buffer)
             strcat(*response_buffer, " Dec ");
             break;
         }
-        
         // Year
         n = sprintf(int_string, "%d", date_and_time->tm_year + 1900);  // Epoch time
         strcat(*response_buffer, int_string);
-        
         // Hour
         strcat(*response_buffer, " ");
         if (date_and_time->tm_hour < 10) {
@@ -220,7 +182,6 @@ void parse(char *buffer, char** response_buffer)
         }
         n = sprintf(int_string, "%d", date_and_time->tm_hour);
         strcat(*response_buffer, int_string);
-        
         // Minutes
         strcat(*response_buffer, ":");
         if (date_and_time->tm_min < 10) {
@@ -228,7 +189,6 @@ void parse(char *buffer, char** response_buffer)
         }
         n = sprintf(int_string, "%d", date_and_time->tm_min);
         strcat(*response_buffer, int_string);
-        
         // Seconds
         strcat(*response_buffer, ":");
         if (date_and_time->tm_sec < 10) {
@@ -238,28 +198,8 @@ void parse(char *buffer, char** response_buffer)
         strcat(*response_buffer, int_string);
         strcat(*response_buffer, " GMT\r\n");
 
-        // Content Type
-//         int i;
-//         for (i=0; i < sizeof(file_name); i++) {
-//             if (file_name[i] == '.') {
-//                 switch (file_name[i+1]) {
-//                 case 'j':
-//                     strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
-//                     break;
-//                 case 'g':
-//                     strcat(*response_buffer, "Content-Type: image/gif\r\n");
-//                     break;
-//                 default:
-//                     strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
-//                     break;
-//                 }
-//                 break;
-//             }
-//         }
-//         if (i == sizeof(file_name)) {    // No extension
-//             strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
-//         }
-        strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");    // content-type of error page is html
+        // Content-Type
+        strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");    // content-type of ERROR page is always html
         
         // Content-Length
         strcat(*response_buffer, "Content-Length: 89\r\n");
@@ -388,7 +328,7 @@ void parse(char *buffer, char** response_buffer)
         
         if (access(file_name, R_OK) == -1) {        // Permission Error
             // Content Type
-            strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
+            strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");  // ERROR page is always of type html
             // Content-Length
             strcat(*response_buffer, "Content-Length: 89\r\n");
             // Data
@@ -535,8 +475,8 @@ void parse(char *buffer, char** response_buffer)
             char *line = NULL;
             size_t len = 0;
             ssize_t read = 0;
+            strcat(*response_buffer, "\r\n");
             while ( (read = getline(&line, &len, fp)) != -1) {
-                strcat(*response_buffer, "\r\n");
                 strcat(*response_buffer, line);
             }
             fclose(fp);
@@ -597,35 +537,12 @@ int main(int argc, char *argv[])
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message:\n%s\n",buffer);
 
+    // Create response
+    parse(buffer, &response_buffer);
+    
     //reply to client
-    parse(buffer, &response_buffer);    // need & anywhere?
-//     char c = response_buffer[rb_len];
-//     while (c != NULL)
-//     {
-//         rb_len++;
-//         c = response_buffer[rb_len];
-//     }
-//     n = write(newsockfd, response_buffer, rb_len);
     n = write(newsockfd, response_buffer, 10000);
     if (n < 0) error("ERROR writing to socket");
-//     printf("\n\n%d %s\n\n", rb_len, file_name);
-    
-//     if (file_name != NULL) {
-//         FILE *fp;
-//         fp = fopen(file_name, "r");
-        
-//         char *line = NULL;
-//         size_t len = 0;
-//         ssize_t read = 0;
-//         while ( (read = getline(&line, &len, fp)) != -1) {
-// //             printf("%d %s\n", read, line);
-//             n = write(newsockfd, line, read);
-//             printf("%d\n",n);
-//             if (n < 0) error("ERROR writing to socket");
-//         }
-//         fclose(fp);
-//     }
-    
     
     close(newsockfd);//close connection 
     close(sockfd);
