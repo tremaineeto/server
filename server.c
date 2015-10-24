@@ -5,6 +5,7 @@
  process for each connection
  */
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <sys/types.h>   // definitions of a number of data types used in socket.h and netinet/in.h
 #include <sys/socket.h>  // definitions of structures needed for sockets, e.g. sockaddr
@@ -19,6 +20,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 
 /* REQUEST MESSAGE
  
@@ -82,7 +84,7 @@
 // CTRL+F to "Enhancements to the server code" to see the dostuff() function to let the connection actually run forever
 
 
-void parse(char *buffer, char** response_buffer, int buffer_length)
+void parse(char *buffer, char** response_buffer, int *buffer_length)
 {
     char *req_type, *file_name, *html_version;
     req_type = strtok(buffer, " ");
@@ -337,23 +339,27 @@ void parse(char *buffer, char** response_buffer, int buffer_length)
         else {
             // Content Type
             int i;
-            for (i=0; i < sizeof(file_name); i++) {
+            char cont_type = 't';
+            for (i=0; i < strlen(file_name); i++) {
                 if (file_name[i] == '.') {
                     switch (file_name[i+1]) {
                     case 'j':
+                        cont_type = 'i';        // "image"
                         strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
                         break;
                     case 'g':
+                        cont_type = 'i';        // "image"
                         strcat(*response_buffer, "Content-Type: image/gif\r\n");
                         break;
                     default:
+                        cont_type = 't';        // "text"
                         strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
                         break;
                     }
                     break;
                 }
             }
-            if (i == sizeof(file_name)) {    // No extension
+            if (i == strlen(file_name)) {    // No extension
                 strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
             }
 
@@ -467,32 +473,33 @@ void parse(char *buffer, char** response_buffer, int buffer_length)
             strcat(*response_buffer, int_string);
             strcat(*response_buffer, " GMT\r\n");
 
-            printf("%d++", strlen(*response_buffer));
-
-            printf("~~%d~~", buffer_length);
-
-            // TODO: FIX ME! Realloc call here is not reallocating, but logic seems right //
-            if (buffer_length < attrib.st_size+strlen(*response_buffer)) {
-                buffer_length = attrib.st_size+strlen(*response_buffer);
-                printf("==%d==", buffer_length);
-                response_buffer = realloc(response_buffer, buffer_length);
-            }
-
-            printf("**%d", strlen(*response_buffer));
+            // Resize "response_buffer" so that data can fit
+            *buffer_length = attrib.st_size+strlen(*response_buffer)+2;    // +2 for '\r\n' between header and content
+            *response_buffer = (char*) realloc(*response_buffer, (*buffer_length)*(sizeof(char)));
+            strcat(*response_buffer, "\r\n");
 
             // Data
-            FILE *fp;
-            fp = fopen(file_name, "r");
-
-            char *line = NULL;
-            size_t len = 0;
-            ssize_t read = 0;
-            strcat(*response_buffer, "\r\n");
-            while ( (read = getline(&line, &len, fp)) != -1) {
-                strcat(*response_buffer, line);
+            if (cont_type == 'i') {    // If content is a picture
+                char *img_src;
+                int fp;
+                fp = open(file_name, O_RDONLY);
+                img_src = mmap(NULL, attrib.st_size, PROT_READ, MAP_PRIVATE, fp, 0);
+                memcpy(*response_buffer, img_src, attrib.st_size);
+                close(fp);
             }
+            else {
+                FILE *fp;
+                fp = fopen(file_name, "r");
 
-            fclose(fp);
+                char *line = NULL;
+                size_t len = 0;
+                ssize_t read = 0;
+                while ( (read = getline(&line, &len, fp)) != -1) {
+                    strcat(*response_buffer, line);
+                }
+
+                fclose(fp);
+            }
         }
     }
 
@@ -543,7 +550,7 @@ int main(int argc, char *argv[])
     int n;
     char buffer[256];
     char *response_buffer, *file_name;
-    response_buffer = (char*) calloc(buffer_length, 4);
+    response_buffer = (char*) calloc(buffer_length, sizeof(char));
     int rb_len = 0;
     
     memset(buffer, 0, 256);  //reset memory
@@ -554,7 +561,7 @@ int main(int argc, char *argv[])
     printf("Here is the message:\n%s\n",buffer);
 
     // Create response
-    parse(buffer, &response_buffer, buffer_length);
+    parse(buffer, &response_buffer, &buffer_length);
     
     //reply to client
     n = write(newsockfd, response_buffer, buffer_length);
