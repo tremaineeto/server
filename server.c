@@ -82,14 +82,14 @@
 // CTRL+F to "Enhancements to the server code" to see the dostuff() function to let the connection actually run forever
 
 
-void parse(char *buffer, char** response_buffer)
+void parse(char *buffer, char** response_buffer, int buffer_length)
 {
     char *req_type, *file_name, *html_version;
     req_type = strtok(buffer, " ");
     file_name = strtok(NULL, " ");
     file_name++;    // Get rid of the slash in first char
     html_version = strtok(NULL, "\r");
-    
+
     if (access(file_name, F_OK) == -1)    //FILE DOESN'T EXIST
     {
         strncpy(*response_buffer, "HTTP/1.1", 8);    
@@ -339,7 +339,6 @@ void parse(char *buffer, char** response_buffer)
             int i;
             for (i=0; i < sizeof(file_name); i++) {
                 if (file_name[i] == '.') {
-                    strcat(*response_buffer, file_name[i+1]);
                     switch (file_name[i+1]) {
                     case 'j':
                         strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
@@ -468,6 +467,19 @@ void parse(char *buffer, char** response_buffer)
             strcat(*response_buffer, int_string);
             strcat(*response_buffer, " GMT\r\n");
 
+            printf("%d++", strlen(*response_buffer));
+
+            printf("~~%d~~", buffer_length);
+
+            // TODO: FIX ME! Realloc call here is not reallocating, but logic seems right //
+            if (buffer_length < attrib.st_size+strlen(*response_buffer)) {
+                buffer_length = attrib.st_size+strlen(*response_buffer);
+                printf("==%d==", buffer_length);
+                response_buffer = realloc(response_buffer, buffer_length);
+            }
+
+            printf("**%d", strlen(*response_buffer));
+
             // Data
             FILE *fp;
             fp = fopen(file_name, "r");
@@ -479,9 +491,11 @@ void parse(char *buffer, char** response_buffer)
             while ( (read = getline(&line, &len, fp)) != -1) {
                 strcat(*response_buffer, line);
             }
+
             fclose(fp);
         }
     }
+
     printf("%s", *response_buffer);
 }
 
@@ -523,11 +537,13 @@ int main(int argc, char *argv[])
     if (newsockfd < 0) {
         error("ERROR on accept");
       }
+
+    int buffer_length = 1000;
     
     int n;
     char buffer[256];
     char *response_buffer, *file_name;
-    response_buffer = (char*) malloc(10000);
+    response_buffer = (char*) calloc(buffer_length, 4);
     int rb_len = 0;
     
     memset(buffer, 0, 256);  //reset memory
@@ -538,10 +554,10 @@ int main(int argc, char *argv[])
     printf("Here is the message:\n%s\n",buffer);
 
     // Create response
-    parse(buffer, &response_buffer);
+    parse(buffer, &response_buffer, buffer_length);
     
     //reply to client
-    n = write(newsockfd, response_buffer, 10000);
+    n = write(newsockfd, response_buffer, buffer_length);
     if (n < 0) error("ERROR writing to socket");
     
     close(newsockfd);//close connection 
