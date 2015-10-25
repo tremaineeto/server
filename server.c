@@ -252,7 +252,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
             break;
         }
         // Date of the month
-        if (date_and_time->tm_mday < 10) {
+        if (date_and_time->tm_mday < 10) {          // ensuring 2 digits for the month
             strcat(*response_buffer, "0");
         }
         char int_string[5];  // to convert integers to strings (year = need 5)
@@ -365,9 +365,9 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
             ret_val = stat(file_name, &attrib);        
 
             // Content-Length
-            char file_size[20];
+            char file_size[20];             
             n = sprintf(file_size, "%d", attrib.st_size);
-            strcat(*response_buffer, "Content-Length: ");
+            strcat(*response_buffer, "Content-Length: ");       // adding content length to buffer
             strcat(*response_buffer, file_size);
             strcat(*response_buffer, "\r\n");
 
@@ -448,21 +448,21 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
             strcat(*response_buffer, int_string);
             // Hour
             strcat(*response_buffer, " ");
-            if (date_and_time->tm_hour < 10) {
+            if (date_and_time->tm_hour < 10) {      // ensuring two digits for hour
                 strcat(*response_buffer, "0");
             }
             n = sprintf(int_string, "%d", date_and_time->tm_hour);
             strcat(*response_buffer, int_string);
             // Minutes
             strcat(*response_buffer, ":");
-            if (date_and_time->tm_min < 10) {
+            if (date_and_time->tm_min < 10) {       // ensuring two digits for minutes
                 strcat(*response_buffer, "0");
             }
             n = sprintf(int_string, "%d", date_and_time->tm_min);
             strcat(*response_buffer, int_string);
             // Seconds
             strcat(*response_buffer, ":");
-            if (date_and_time->tm_sec < 10) {
+            if (date_and_time->tm_sec < 10) {       // ensuring two digits for seconds
                 strcat(*response_buffer, "0");
             }
             n = sprintf(int_string, "%d", date_and_time->tm_sec);
