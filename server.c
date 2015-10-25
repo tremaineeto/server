@@ -581,40 +581,83 @@ int main(int argc, char *argv[])
     //         close(newsockfd); 
     // } 
     // return 0; 
+    while (1) {
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);     // add this code to infinite while
+         
+        if (newsockfd < 0) 
+            error("ERROR on accept");
+         
+        pid = fork(); // forks a new process
+        if (pid < 0)
+            error("ERROR on fork");
+         
+        if (pid == 0)  { // pid resulting from fork()
+            close(sockfd);
+            int buffer_length = 1000;   // our own reasonable buffer length
+    
+            int n;
+            char buffer[256];
+            char *response_buffer, *file_name;  
+            response_buffer = (char*) calloc(buffer_length, sizeof(char));      // calloc for safety
+            int rb_len = 0;
+            
+            memset(buffer, 0, 256);  //reset memory
+            
+            //read client's message
+            n = read(newsockfd,buffer,255);
+            if (n < 0) error("ERROR reading from socket");
+            printf("Here is the message:\n%s\n",buffer);
+
+            // Create response
+            parse(buffer, &response_buffer, &buffer_length);
+            
+            //reply to client
+            n = write(newsockfd, response_buffer, buffer_length);
+            if (n < 0) error("ERROR writing to socket");
+            
+            close(newsockfd); //close connection 
+            close(sockfd);
+
+            exit(0);
+        }
+        else // returns the child's pid to the parent
+            close(newsockfd); 
+    } 
+    return 0; 
 
 
 
     //accept connections
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    //newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
     
-    if (newsockfd < 0) {
-        error("ERROR on accept");
-      }
+    // if (newsockfd < 0) {
+    //     error("ERROR on accept");
+    //   }
 
-    int buffer_length = 1000;
+    // int buffer_length = 1000;
     
-    int n;
-    char buffer[256];
-    char *response_buffer, *file_name;
-    response_buffer = (char*) calloc(buffer_length, sizeof(char));
-    int rb_len = 0;
+    // int n;
+    // char buffer[256];
+    // char *response_buffer, *file_name;
+    // response_buffer = (char*) calloc(buffer_length, sizeof(char));
+    // int rb_len = 0;
     
-    memset(buffer, 0, 256);  //reset memory
+    // memset(buffer, 0, 256);  //reset memory
     
-    //read client's message
-    n = read(newsockfd,buffer,255);
-    if (n < 0) error("ERROR reading from socket");
-    printf("Here is the message:\n%s\n",buffer);
+    // //read client's message
+    // n = read(newsockfd,buffer,255);
+    // if (n < 0) error("ERROR reading from socket");
+    // printf("Here is the message:\n%s\n",buffer);
 
-    // Create response
-    parse(buffer, &response_buffer, &buffer_length);
+    // // Create response
+    // parse(buffer, &response_buffer, &buffer_length);
     
-    //reply to client
-    n = write(newsockfd, response_buffer, buffer_length);
-    if (n < 0) error("ERROR writing to socket");
+    // //reply to client
+    // n = write(newsockfd, response_buffer, buffer_length);
+    // if (n < 0) error("ERROR writing to socket");
     
-    close(newsockfd);//close connection 
-    close(sockfd);
+    // close(newsockfd);//close connection 
+    // close(sockfd);
     
     return 0; 
 }
