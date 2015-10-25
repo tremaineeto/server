@@ -80,23 +80,19 @@
 
 //http://stackoverflow.com/questions/9828752/read-line-by-line-from-a-socket-buffer
 
-// http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
-// CTRL+F to "Enhancements to the server code" to see the dostuff() function to let the connection actually run forever
-
-
-void parse(char *buffer, char** response_buffer, int *buffer_length)
+void parse(char *buffer, char** response_buffer, int *buffer_length)        // function to parse response & create our headers
 {
     char *req_type, *file_name, *html_version;
-    req_type = strtok(buffer, " ");
+    req_type = strtok(buffer, " ");     // tokenize by spaces
     file_name = strtok(NULL, " ");
     file_name++;    // Get rid of the slash in first char
-    html_version = strtok(NULL, "\r");
+    html_version = strtok(NULL, "\r");  // look for carriage returns and tokenize by them 
 
-    if (access(file_name, F_OK) == -1)    //FILE DOESN'T EXIST
+    if (access(file_name, F_OK) == -1)    // FILE DOESN'T EXIST
     {
-        strncpy(*response_buffer, "HTTP/1.1", 8);    
-        strcat(*response_buffer, " 404 Not Found\r\n");
-        strcat(*response_buffer, "Server: CS118 Project\r\n");
+        strncpy(*response_buffer, "HTTP/1.1", 8);    // first call must be strncpy; explicitly writing
+        strcat(*response_buffer, " 404 Not Found\r\n");     // 404 status code corresponds to file not found
+        strcat(*response_buffer, "Server: CS118 Project\r\n");      // coding our server as "CS118 project"
 
         // Date and Time
         time_t t = time(NULL);
@@ -104,7 +100,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
         date_and_time = gmtime(&t);
         strcat(*response_buffer, "Date: ");
         // Day of the week
-        switch (date_and_time->tm_wday) {
+        switch (date_and_time->tm_wday) {           // turns the integer response (days after Sunday) into a string
         case 0:
             strcat(*response_buffer, "Sun, ");
             break;
@@ -128,7 +124,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
             break;
         }
         // Date of the month
-        if (date_and_time->tm_mday < 10) {
+        if (date_and_time->tm_mday < 10) {              // appends 0 to front to always get 2 digits
             strcat(*response_buffer, "0");
         }
         char int_string[5];  // To convert integers to strings (year = need 5)
@@ -136,7 +132,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
         n = sprintf(int_string, "%d", date_and_time->tm_mday);
         strcat(*response_buffer, int_string);  // change second argument to string
         // Month
-        switch (date_and_time->tm_mon) {
+        switch (date_and_time->tm_mon) {            // converts integer (months after January) to strings
         case 0:
             strcat(*response_buffer, " Jan ");
             break;
@@ -175,36 +171,36 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
             break;
         }
         // Year
-        n = sprintf(int_string, "%d", date_and_time->tm_year + 1900);  // Epoch time
+        n = sprintf(int_string, "%d", date_and_time->tm_year + 1900);  // Epoch time (years after 1900)
         strcat(*response_buffer, int_string);
         // Hour
         strcat(*response_buffer, " ");
-        if (date_and_time->tm_hour < 10) {
+        if (date_and_time->tm_hour < 10) {      // ensures 2 digits for hour
             strcat(*response_buffer, "0");
         }
         n = sprintf(int_string, "%d", date_and_time->tm_hour);
         strcat(*response_buffer, int_string);
         // Minutes
         strcat(*response_buffer, ":");
-        if (date_and_time->tm_min < 10) {
+        if (date_and_time->tm_min < 10) {       // ensures 2 digits for minutes
             strcat(*response_buffer, "0");
         }
         n = sprintf(int_string, "%d", date_and_time->tm_min);
         strcat(*response_buffer, int_string);
         // Seconds
         strcat(*response_buffer, ":");
-        if (date_and_time->tm_sec < 10) {
+        if (date_and_time->tm_sec < 10) {       // ensures 2 digits for seconds
             strcat(*response_buffer, "0");
         }
         n = sprintf(int_string, "%d", date_and_time->tm_sec);
         strcat(*response_buffer, int_string);
-        strcat(*response_buffer, " GMT\r\n");
+        strcat(*response_buffer, " GMT\r\n");   // time zone
 
         // Content-Type
         strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");    // content-type of ERROR page is always html
         
         // Content-Length
-        strcat(*response_buffer, "Content-Length: 89\r\n");
+        strcat(*response_buffer, "Content-Length: 89\r\n");     // we counted the number of characters
         
         // Connection
         strcat(*response_buffer, "Connection: close\r\n");
@@ -217,10 +213,10 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
     {
         strncpy(*response_buffer, "HTTP/1.1", 8);
         if (access(file_name, R_OK) == -1) {        // Permission Error
-            strcat(*response_buffer, " 403 Forbidden\r\n");
+            strcat(*response_buffer, " 403 Forbidden\r\n");     
         }
         else {
-            strcat(*response_buffer, " 200 OK\r\n");
+            strcat(*response_buffer, " 200 OK\r\n");    // 200 error code corresponds to an OK (valid) response
         }
         strcat(*response_buffer, "Connection: close\r\n");
         strcat(*response_buffer, "Server: CS118 Project\r\n");
@@ -232,7 +228,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
         date_and_time = gmtime(&t);
         strcat(*response_buffer, "Date: ");
         // Day of the week
-        switch (date_and_time->tm_wday) {
+        switch (date_and_time->tm_wday) {       // turns the integer response (days after Sunday) into a string
         case 0:
             strcat(*response_buffer, "Sun, ");
             break;
@@ -259,7 +255,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
         if (date_and_time->tm_mday < 10) {
             strcat(*response_buffer, "0");
         }
-        char int_string[5];  // To convert integers to strings (year = need 5)
+        char int_string[5];  // to convert integers to strings (year = need 5)
         int n;
         n = sprintf(int_string, "%d", date_and_time->tm_mday);
         strcat(*response_buffer, int_string);  // change second argument to string
@@ -340,18 +336,18 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
             // Content Type
             int i;
             char cont_type = 't';
-            for (i=0; i < strlen(file_name); i++) {
+            for (i=0; i < strlen(file_name); i++) {     // checking to see what type of file the extension is
                 if (file_name[i] == '.') {
                     switch (file_name[i+1]) {
-                    case 'j':
+                    case 'j':                   // checking for the j in jpeg
                         cont_type = 'i';        // "image"
                         strcat(*response_buffer, "Content-Type: image/jpeg\r\n");
                         break;
-                    case 'g':
+                    case 'g':                   // checking for the g in gif
                         cont_type = 'i';        // "image"
                         strcat(*response_buffer, "Content-Type: image/gif\r\n");
                         break;
-                    default:
+                    default:                    // default is HTML
                         cont_type = 't';        // "text"
                         strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
                         break;
@@ -359,7 +355,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
                     break;
                 }
             }
-            if (i == strlen(file_name)) {    // No extension
+            if (i == strlen(file_name)) {    // accounting for no extension
                 strcat(*response_buffer, "Content-Type: text/html; charset=utf-8\r\n");
             }
 
@@ -409,7 +405,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
             n = sprintf(int_string, "%d", date_and_time->tm_mday);
             strcat(*response_buffer, int_string);  // change second argument to string
             // Month
-            switch (date_and_time->tm_mon) {
+            switch (date_and_time->tm_mon) {            // converts integer (months after January) to strings
             case 0:
                 strcat(*response_buffer, " Jan ");
                 break;
@@ -473,13 +469,13 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
             strcat(*response_buffer, int_string);
             strcat(*response_buffer, " GMT\r\n");
 
-            // Resize "response_buffer" so that data can fit
+            // Resize "response_buffer" so that data can fit no matter the size
             *buffer_length = attrib.st_size+strlen(*response_buffer)+2;    // +2 for '\r\n' between header and content
             *response_buffer = (char*) realloc(*response_buffer, (*buffer_length)*(sizeof(char)));
             strcat(*response_buffer, "\r\n");
 
             // Data
-            if (cont_type == 'i') {    // If content is a picture
+            if (cont_type == 'i') {    // If content is a picture, must treat it differently (mmap and memcpy)
                 char *img_src;
                 int fp;
                 fp = open(file_name, O_RDONLY);
@@ -487,7 +483,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
                 memcpy(*response_buffer, img_src, attrib.st_size);
                 close(fp);
             }
-            else {
+            else {              // content is not a picture, so can read line by line
                 FILE *fp;
                 fp = fopen(file_name, "r");
 
@@ -503,7 +499,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)
         }
     }
 
-    printf("%s", *response_buffer);
+    printf("%s", *response_buffer);         // print out the entire response buffer
 }
 
 void error(char *msg)
@@ -581,83 +577,83 @@ int main(int argc, char *argv[])
     //         close(newsockfd); 
     // } 
     // return 0; 
-    while (1) {
-        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);     // add this code to infinite while
+    // while (1) {
+    //     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);     // add this code to infinite while
          
-        if (newsockfd < 0) 
-            error("ERROR on accept");
+    //     if (newsockfd < 0) 
+    //         error("ERROR on accept");
          
-        pid = fork(); // forks a new process
-        if (pid < 0)
-            error("ERROR on fork");
+    //     pid = fork(); // forks a new process
+    //     if (pid < 0)
+    //         error("ERROR on fork");
          
-        if (pid == 0)  { // pid resulting from fork()
-            close(sockfd);
-            int buffer_length = 1000;   // our own reasonable buffer length
+    //     if (pid == 0)  { // pid resulting from fork()
+    //         close(sockfd);
+    //         int buffer_length = 1000;   // our own reasonable buffer length
     
-            int n;
-            char buffer[256];
-            char *response_buffer, *file_name;  
-            response_buffer = (char*) calloc(buffer_length, sizeof(char));      // calloc for safety
-            int rb_len = 0;
+    //         int n;
+    //         char buffer[256];
+    //         char *response_buffer, *file_name;  
+    //         response_buffer = (char*) calloc(buffer_length, sizeof(char));      // calloc for safety
+    //         int rb_len = 0;
             
-            memset(buffer, 0, 256);  //reset memory
+    //         memset(buffer, 0, 256);  //reset memory
             
-            //read client's message
-            n = read(newsockfd,buffer,255);
-            if (n < 0) error("ERROR reading from socket");
-            printf("Here is the message:\n%s\n",buffer);
+    //         //read client's message
+    //         n = read(newsockfd,buffer,255);
+    //         if (n < 0) error("ERROR reading from socket");
+    //         printf("Here is the message:\n%s\n",buffer);
 
-            // Create response
-            parse(buffer, &response_buffer, &buffer_length);
+    //         // Create response
+    //         parse(buffer, &response_buffer, &buffer_length);
             
-            //reply to client
-            n = write(newsockfd, response_buffer, buffer_length);
-            if (n < 0) error("ERROR writing to socket");
+    //         //reply to client
+    //         n = write(newsockfd, response_buffer, buffer_length);
+    //         if (n < 0) error("ERROR writing to socket");
             
-            close(newsockfd); //close connection 
-            close(sockfd);
+    //         close(newsockfd); //close connection 
+    //         close(sockfd);
 
-            exit(0);
-        }
-        else // returns the child's pid to the parent
-            close(newsockfd); 
-    } 
-    return 0; 
+    //         exit(0);
+    //     }
+    //     else // returns the child's pid to the parent
+    //         close(newsockfd); 
+    // } 
+    // return 0; 
 
 
 
     //accept connections
-    //newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
     
-    // if (newsockfd < 0) {
-    //     error("ERROR on accept");
-    //   }
+    if (newsockfd < 0) {
+        error("ERROR on accept");
+      }
 
-    // int buffer_length = 1000;
+    int buffer_length = 1000;
     
-    // int n;
-    // char buffer[256];
-    // char *response_buffer, *file_name;
-    // response_buffer = (char*) calloc(buffer_length, sizeof(char));
-    // int rb_len = 0;
+    int n;
+    char buffer[256];
+    char *response_buffer, *file_name;
+    response_buffer = (char*) calloc(buffer_length, sizeof(char));
+    int rb_len = 0;
     
-    // memset(buffer, 0, 256);  //reset memory
+    memset(buffer, 0, 256);  //reset memory
     
-    // //read client's message
-    // n = read(newsockfd,buffer,255);
-    // if (n < 0) error("ERROR reading from socket");
-    // printf("Here is the message:\n%s\n",buffer);
+    //read client's message
+    n = read(newsockfd,buffer,255);
+    if (n < 0) error("ERROR reading from socket");
+    printf("Here is the message:\n%s\n",buffer);
 
-    // // Create response
-    // parse(buffer, &response_buffer, &buffer_length);
+    // Create response
+    parse(buffer, &response_buffer, &buffer_length);
     
-    // //reply to client
-    // n = write(newsockfd, response_buffer, buffer_length);
-    // if (n < 0) error("ERROR writing to socket");
+    //reply to client
+    n = write(newsockfd, response_buffer, buffer_length);
+    if (n < 0) error("ERROR writing to socket");
     
-    // close(newsockfd);//close connection 
-    // close(sockfd);
+    close(newsockfd);//close connection 
+    close(sockfd);
     
     return 0; 
 }
