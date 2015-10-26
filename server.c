@@ -430,6 +430,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
                 strncpy(temp_response_buffer, *response_buffer, (*buffer_length)*sizeof(char));
                 
                 memcpy(*response_buffer, img_src, attrib.st_size);
+
                 close(fp);
             }
             else {              // content is not a picture, so can read line by line
