@@ -489,12 +489,12 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
                 strncpy(temp_response_buffer, *response_buffer, (*buffer_length)*sizeof(char));
                 
                 memcpy(*response_buffer, img_src, attrib.st_size);
-                int i;
-                for (i = 0; i < *buffer_length; i+=sizeof(char)) {
-                    printf("%c", temp_response_buffer[i]);         // print out the entire response buffer
-                }
+                // int i;
+                // for (i = 0; i < *buffer_length; i+=sizeof(char)) {
+                //     printf("%c", temp_response_buffer[i]);         // print out the entire response buffer
+                // }
 
-                imageBufferUsed = true;
+                // imageBufferUsed = true;
                 close(fp);
             }
             else {              // content is not a picture, so can read line by line
@@ -512,9 +512,9 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
             }
         }
     }
-    if (imageBufferUsed == false) {
-        printf("%s", *response_buffer);         // print out the entire response buffer
-    }
+    // if (imageBufferUsed == false) {
+    //     printf("%s", *response_buffer);         // print out the entire response buffer
+    // }
 }
 
 void error(char *msg)
