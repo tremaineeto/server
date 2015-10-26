@@ -23,68 +23,9 @@
 #include <sys/mman.h>
 #include <stdbool.h>
 
-/* REQUEST MESSAGE
- 
- GET /test.html HTTP/1.1
- Host: localhost:8083
- User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:41.0) Gecko/20100101 Firefox/41.0
- Accept: text/html,application/xhtml+xml,application/xml;q=0.9,* / *;q=0.8
- Accept-Language: en-US,en;q=0.5
- Accept
- 
- */
-
-/* RESPONSE MESSAGE
- 
- HTTP/1.1 200 OK
- Connection: close
- 
- Date: Tue, 09 Aug 2011 15:44:04 GMT
- Server: Apache/2.2.3 (CentOS)
- Last-Modified: Tue, 09 Aug 2011 15:11:03 GMT
- Content-Length: 6821
- Content-Type: text/html
- (data data data data data ...)
- 
- ---
- 
- HTTP/1.0 200 OK
- Content-Type: image/png
- Date: Sun, 18 Oct 2015 01:36:58 GMT
- Expires: Sun, 18 Oct 2015 01:36:58 GMT
- Cache-Control: private, max-age=31536000
- Last-Modified: Fri, 04 Sep 2015 22:33:08 GMT
- X-Content-Type-Options: nosniff
- Server: sffe
- Content-Length: 13504
- X-XSS-Protection: 1; mode=block
- 
- 
- HTTP/1.0 404 Not Found
- Content-Type: text/html; charset=UTF-8
- X-Content-Type-Options: nosniff
- Date: Sun, 18 Oct 2015 01:29:40 GMT
- Server: sffe
- Content-Length: 1571
- X-XSS-Protection: 1; mode=block
- 
- 
- HTTP/1.1 404 Not Found
- Server: GitHub.com
- Date: Sun, 18 Oct 2015 01:36:46 GMT
- Content-Type: text/html; charset=utf-8
- Content-Length: 9116
- Connection: close
- ETag: "5519ee21-239c"
- Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'
- */
-
-//http://stackoverflow.com/questions/9828752/read-line-by-line-from-a-socket-buffer
-
 void parse(char *buffer, char** response_buffer, int *buffer_length)        // function to parse response & create our headers
 {
     char *temp_response_buffer;
-    bool imageBufferUsed = false;
     temp_response_buffer = (char*) calloc(*buffer_length, sizeof(char));
     char *req_type, *file_name, *html_version;
     req_type = strtok(buffer, " ");     // tokenize by spaces
@@ -207,7 +148,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
         strcat(*response_buffer, "Content-Length: 89\r\n");     // we counted the number of characters
         
         // Connection
-        strcat(*response_buffer, "Connection: close\r\n");
+        strcat(*response_buffer, "Connection: keep-alive\r\n");
         
         // 404 Error Message
         strcat(*response_buffer, "\r\n<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>404 Not Found</H1></BODY></HTML>");
@@ -223,7 +164,7 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
         else {
             strcat(*response_buffer, " 200 OK\r\n");    // 200 error code corresponds to an OK (valid) response
         }
-        strcat(*response_buffer, "Connection: close\r\n");
+        strcat(*response_buffer, "Connection: keep-alive\r\n");
         strcat(*response_buffer, "Server: CS118 Project\r\n");
         
         // Date and Time
@@ -489,12 +430,6 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
                 strncpy(temp_response_buffer, *response_buffer, (*buffer_length)*sizeof(char));
                 
                 memcpy(*response_buffer, img_src, attrib.st_size);
-                int i;
-                for (i = 0; i < *buffer_length; i+=sizeof(char)) {
-                    printf("%c", temp_response_buffer[i]);         // print out the entire response buffer
-                }
-
-                imageBufferUsed = true;
                 close(fp);
             }
             else {              // content is not a picture, so can read line by line
@@ -511,9 +446,6 @@ void parse(char *buffer, char** response_buffer, int *buffer_length)        // f
                 fclose(fp);
             }
         }
-    }
-    if (imageBufferUsed == false) {
-        printf("%s", *response_buffer);         // print out the entire response buffer
     }
 }
 
@@ -549,126 +481,45 @@ int main(int argc, char *argv[])
     
     listen(sockfd,5);  //5 simultaneous connection at most
     
-    // while (1) {
-    //     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);     // add this code to infinite while
+    while (1) {
+        clilen = sizeof(cli_addr);
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);     // add this code to infinite while
     
-    //     if (newsockfd < 0)
-    //         error("ERROR on accept");
+        if (newsockfd < 0)
+            error("ERROR on accept");
     
-    //     pid = fork(); // forks a new process
-    //     if (pid < 0)
-    //         error("ERROR on fork");
+        pid = fork(); // forks a new process
+        if (pid < 0)
+            error("ERROR on fork");
     
-    //     if (pid == 0)  { // pid resulting from fork()
-    //         close(sockfd);
-    //         int buffer_length = 1000;   // our own reasonable buffer length
+        if (pid == 0)  { // pid resulting from fork()
+            close(sockfd);
+            int buffer_length = 1000;   // our own reasonable buffer length
     
-    //         int n;
-    //         char buffer[256];
-    //         char *response_buffer, *file_name;
-    //         response_buffer = (char*) calloc(buffer_length, sizeof(char));      // calloc for safety
-    //         int rb_len = 0;
+            int n;
+            char buffer[256];
+            char *response_buffer, *file_name;
+            response_buffer = (char*) calloc(buffer_length, sizeof(char));      // calloc for safety
+            int rb_len = 0;
     
-    //         memset(buffer, 0, 256);  //reset memory
+            memset(buffer, 0, 256);  //reset memory
     
-    //         //read client's message
-    //         n = read(newsockfd,buffer,255);
-    //         if (n < 0) error("ERROR reading from socket");
-    //         printf("Here is the message:\n%s\n",buffer);
+            //read client's message
+            n = read(newsockfd,buffer,255);
+            if (n < 0) error("ERROR reading from socket");
+            printf("Here is the message:\n%s\n\n",buffer);
     
-    //         // Create response
-    //         parse(buffer, &response_buffer, &buffer_length);
+            // Create response
+            parse(buffer, &response_buffer, &buffer_length);
     
-    //         //reply to client
-    //         n = write(newsockfd, response_buffer, buffer_length);
-    //         if (n < 0) error("ERROR writing to socket");
+            //reply to client
+            n = write(newsockfd, response_buffer, buffer_length);
+            if (n < 0) error("ERROR writing to socket");
     
-    //         close(newsockfd); //close connection
-    //         close(sockfd);
-    
-    //         exit(0);
-    //     }
-    //     else // returns the child's pid to the parent
-    //         close(newsockfd);
-    // }
-    // return 0;
-    // while (1) {
-    //     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);     // add this code to infinite while
-    
-    //     if (newsockfd < 0)
-    //         error("ERROR on accept");
-    
-    //     pid = fork(); // forks a new process
-    //     if (pid < 0)
-    //         error("ERROR on fork");
-    
-    //     if (pid == 0)  { // pid resulting from fork()
-    //         close(sockfd);
-    //         int buffer_length = 1000;   // our own reasonable buffer length
-    
-    //         int n;
-    //         char buffer[256];
-    //         char *response_buffer, *file_name;
-    //         response_buffer = (char*) calloc(buffer_length, sizeof(char));      // calloc for safety
-    //         int rb_len = 0;
-    
-    //         memset(buffer, 0, 256);  //reset memory
-    
-    //         //read client's message
-    //         n = read(newsockfd,buffer,255);
-    //         if (n < 0) error("ERROR reading from socket");
-    //         printf("Here is the message:\n%s\n",buffer);
-    
-    //         // Create response
-    //         parse(buffer, &response_buffer, &buffer_length);
-    
-    //         //reply to client
-    //         n = write(newsockfd, response_buffer, buffer_length);
-    //         if (n < 0) error("ERROR writing to socket");
-    
-    //         close(newsockfd); //close connection
-    //         close(sockfd);
-    
-    //         exit(0);
-    //     }
-    //     else // returns the child's pid to the parent
-    //         close(newsockfd);
-    // }
-    // return 0;
-    
-    
-    
-    //accept connections
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    
-    if (newsockfd < 0) {
-        error("ERROR on accept");
+            exit(0);
+        }
+        else // returns the child's pid to the parent
+            close(newsockfd);
     }
-    
-    int buffer_length = 1000;
-    
-    int n;
-    char buffer[256];
-    char *response_buffer, *file_name;
-    response_buffer = (char*) calloc(buffer_length, sizeof(char));
-    int rb_len = 0;
-    
-    memset(buffer, 0, 256);  //reset memory
-    
-    //read client's message
-    n = read(newsockfd,buffer,255);
-    if (n < 0) error("ERROR reading from socket");
-    printf("Here is the message:\n%s\n",buffer);
-    
-    // Create response
-    parse(buffer, &response_buffer, &buffer_length);
-    
-    //reply to client
-    n = write(newsockfd, response_buffer, buffer_length);
-    if (n < 0) error("ERROR writing to socket");
-    
-    close(newsockfd);//close connection
-    close(sockfd);
-    
-    return 0; 
+    return 0;
 }
