@@ -1,2 +1,2 @@
 server: server.c 
-	gcc -o server server.c -I.
+	gcc -w -o server server.c -I.
